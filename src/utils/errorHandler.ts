@@ -1,5 +1,5 @@
 import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
-import { ENV } from '../config/envConfig';
+import { ENV } from '../config/env';
 
 export function handleError(
     error: FastifyError,

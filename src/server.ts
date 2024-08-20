@@ -1,8 +1,9 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import logger from './config/logger';
-import { ENV } from './config/envConfig';
+import { ENV } from './config/env';
 import { handleError } from './utils/errorHandler';
 import { helloRoute } from './routes/a';
+import { registerSwagger } from './plugins/swagger';
 
 export async function buildServer() {
     const fastify: FastifyInstance = Fastify({
@@ -11,7 +12,8 @@ export async function buildServer() {
 
     fastify.setErrorHandler(handleError);
 
-    // Register Plugins
+    // Register Fastify Plugins
+    await registerSwagger(fastify);
 
     // Register Route
     helloRoute(fastify);
