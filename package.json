@@ -1,5 +1,5 @@
 {
-    "name": "guilcor-fastify-backend",
+    "name": "fastify-backend-template",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
