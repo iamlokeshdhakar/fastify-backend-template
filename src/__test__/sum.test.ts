@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { buildServer } from '../src/server';
-import { addTwo } from '../src/utils/add';
+import { buildServer } from '../server';
 import request from 'supertest';
+import addTwo from '../utils/add';
 
 describe('App', () => {
     let fastify: FastifyInstance;
@@ -20,8 +20,7 @@ describe('App', () => {
     });
 
     it('should return "Hello" on GET /', async () => {
-        const response = await request(fastify.server).get('/');
-        expect(response.statusCode).toBe(200);
-        expect(response.text).toBe('Hello');
+        const response = await request(fastify.server).get('/api/admin');
+        expect(response.text).toBe('Hello from Admin');
     });
 });

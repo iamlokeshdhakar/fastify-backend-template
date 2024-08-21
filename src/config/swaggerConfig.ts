@@ -5,8 +5,8 @@ export const swaggerOptions: SwaggerOptions = {
     openapi: {
         openapi: '3.0.0',
         info: {
-            title: 'Fastify Backend API',
-            description: 'API documentation for Fastify Backend',
+            title: 'Guilcor Backend API',
+            description: 'API documentation for Guilcor Backend',
             version: '0.1.0',
         },
         tags: [

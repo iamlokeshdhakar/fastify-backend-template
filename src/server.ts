@@ -2,8 +2,9 @@ import Fastify, { FastifyInstance } from 'fastify';
 import logger from './config/logger';
 import { ENV } from './config/env';
 import { handleError } from './utils/errorHandler';
-import { helloRoute } from './routes/a';
 import { registerSwagger } from './plugins/swagger';
+import adminRoute from './modules/admin';
+import clientRoute from './modules/client';
 
 export async function buildServer() {
     const fastify: FastifyInstance = Fastify({
@@ -12,11 +13,12 @@ export async function buildServer() {
 
     fastify.setErrorHandler(handleError);
 
-    // Register Fastify Plugins
+    // Register Plugins
     await registerSwagger(fastify);
 
     // Register Route
-    helloRoute(fastify);
+    fastify.register(adminRoute, { prefix: '/api/admin' });
+    fastify.register(clientRoute, { prefix: '/api/client' });
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {

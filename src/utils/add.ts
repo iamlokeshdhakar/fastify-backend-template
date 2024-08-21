@@ -1,3 +1,3 @@
-export function addTwo(a: number, b: number): number {
+export default function addTwo(a: number, b: number) {
     return a + b;
 }

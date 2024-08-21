@@ -1,0 +1,381 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+////////////////////////////////////////////////////
+// ENUMS
+////////////////////////////////////////////////////
+
+enum ClockType {
+  HOUR_24
+  HOUR_12
+}
+
+enum TemperatureUnit {
+  CELSIUS
+  FAHRENHEIT
+}
+
+enum WorkspaceRole {
+  MANAGER
+  MEMBER
+  OWNER
+}
+
+enum ConnectionType {
+  WIFI
+  BLUETOOTH
+}
+
+enum Measurements {
+  HUMIDITY
+  TEMPERATURE
+}
+
+enum Features {
+  LOGGING
+  COOKING_ASSISTANT
+  TEMPERATURE_STEAMING
+}
+
+enum NotificationType {
+  CRITICAL_LOW
+  WARNING_LOW
+  CRITICAL_HIGH
+  WARNING_HIGH
+  BATTERY_LOW
+  DISCONNECT
+  NEW_DEVICE
+}
+
+enum SubscriptionType {
+  TRIAL
+  PREMIUM
+}
+
+////////////////////////////////////////////////////
+// MODELS
+////////////////////////////////////////////////////
+
+model Customer {
+  id                 String   @id @default(uuid())
+  firebaseAuthId     String   @unique
+  displayName        String
+  email              String   @unique
+  isDemo             Boolean? // @default()
+  avatarURL          String?
+  phoneNumber        String
+  notificationEmails String[]
+
+  // notifications
+  webNotification    Boolean             @default(true)
+  mobNotification    Boolean             @default(true)
+  Notification       Notification[]
+  notificationTokens NotificationToken[]
+
+  // relations
+  timeFormat        ClockType          @default(HOUR_24)
+  tempFormat        TemperatureUnit    @default(CELSIUS)
+  workspaceManagers WorkspaceManager[] @relation("customer")
+  tenantId          String?
+  Tenant            Tenant?            @relation(fields: [tenantId], references: [id])
+
+  lastLogin    DateTime
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Subscription Subscription[]
+}
+
+model WorkspaceManager {
+  id   String        @id @default(uuid())
+  role WorkspaceRole @default(MEMBER)
+
+  customerId  String
+  customer    Customer  @relation("customer", fields: [customerId], references: [id])
+  workspaceId String
+  workspace   Workspace @relation("workspace", fields: [workspaceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Workspace {
+  id       String  @id @default(uuid())
+  name     String
+  mapImage String?
+  logo     String  @default("")
+  default  Boolean @default(false)
+
+  Device            Device[]
+  Notification      Notification[]
+  WorkspaceManagers WorkspaceManager[] @relation("workspace")
+  tenantId          String?
+  Tenant            Tenant?            @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Employee {
+  id                 String  @id @default(uuid())
+  firstName          String
+  lastName           String
+  email              String
+  defaultEmail       Boolean
+  password           String
+  passwordResetToken String?
+
+  roleID   String?
+  role     Role?   @relation(fields: [roleID], references: [id])
+  tenantId String
+  Tenant   Tenant  @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Role {
+  id      String  @id @default(uuid())
+  title   String
+  default Boolean @default(false)
+
+  Employee   Employee[]
+  Permission Permission[] @relation("RolePermissions")
+  Invitation Invitation[] @relation("InvitationRole")
+  tenantId   String?
+  Tenant     Tenant?      @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  title String @unique
+
+  role Role[] @relation("RolePermissions")
+}
+
+model Invitation {
+  id                String  @id @default(uuid())
+  url               String
+  email             String
+  defaultEmail      Boolean
+  token             String  @unique
+  verificationToken String?
+  SignedUp          Boolean @default(false)
+
+  roleId   String
+  role     Role    @relation("InvitationRole", references: [id], fields: [roleId])
+  tenantId String?
+  Tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  // tenant 
+  createdAt DateTime @default(now())
+}
+
+model Device {
+  id            String  @id @default(uuid())
+  name          String
+  serialNo      String
+  deviceCode    String
+  userGivenName String
+  connectionKey String
+  isArchived    Boolean @default(false)
+
+  // related to map
+  xCord      Float?
+  yCord      Float?
+  upperLimit Float?
+  lowerLimit Float?
+
+  // general info.
+  connected    Boolean @default(true)
+  batteryLevel Int     @default(100)
+
+  deviceTypeId String?
+  workspaceId  String
+  DeviceType   DeviceType? @relation(fields: [deviceTypeId], references: [id])
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id])
+
+  notifications Notification[]
+  DeviceChannel DeviceChannel[]
+  // LiveConnection  LiveConnections[]
+  // CookingSession  CookingSession[]
+
+  tenantId String?
+  Tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeviceType {
+  id                  String  @id @default(uuid())
+  name                String
+  icon                String
+  status              Boolean @default(true)
+  tutorialLink        String?
+  tutorialDescription String? // TODO: markdown frontend
+  temperatureSensor   Int     @default(1)
+  humiditySensor      Int     @default(0)
+
+  device  Device[]
+  feature Features
+
+  Tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  tenantId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeviceChannel {
+  id    String       @id @default(uuid())
+  name  String
+  alias String
+  type  Measurements
+
+  deviceId String
+  device   Device @relation(fields: [deviceId], references: [id])
+
+  currentReading Float
+  criticalLow    Float
+  warningLow     Float
+  criticalHigh   Float
+  warningHigh    Float
+}
+
+model NotificationToken {
+  id     String @id @default(uuid())
+  token  String @unique
+  client String
+
+  userId String
+  user   Customer @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  lastUpdated DateTime @updatedAt
+}
+
+model Notification {
+  id       String  @id @default(uuid())
+  title_en String
+  title_fr String
+  title_de String
+  title_es String
+  desc_en  String
+  desc_fr  String
+  desc_de  String
+  desc_es  String
+  read     Boolean @default(false)
+
+  type        NotificationType
+  workspaceId String
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id])
+  customerId  String
+  customer    Customer         @relation(fields: [customerId], references: [id])
+  deviceId    String
+  device      Device           @relation(fields: [deviceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tenant {
+  id            String  @id @default(uuid())
+  name          String
+  subDomain     String? @unique
+  defaultTenant Boolean @default(false)
+  active        Boolean
+  tenantIdIP    String?
+
+  // map things...
+  logo           String?
+  mapImageUrl    String?
+  primaryColor   String?
+  secondaryColor String?
+
+  Role       Role[]
+  Device     Device[]
+  Customer   Customer[]
+  Employee   Employee[]
+  Workspace  Workspace[]
+  Invitation Invitation[]
+  DeviceType DeviceType[]
+
+  // Meat              Meat[]
+  // Subscription      Subscription[]
+  // Plan              Plan[]
+  // StripeSecrets     StripeSecrets
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Subscription Subscription[]
+  Plan         Plan[]
+  StripeSecret StripeSecret[]
+
+  // StripeSecrets   StripeSecrets @relation("Tenant_Stripe", fields: [stripeSecretsId], references: [id])
+  // stripeSecretsId String
+}
+
+model Subscription {
+  id           String           @id @default(uuid())
+  amount       Int
+  purchaseDate DateTime
+  expiryDate   DateTime
+  invoiceUrl   String
+  autoRenew    Boolean          @default(true)
+  type         SubscriptionType @default(TRIAL)
+
+  stripeCustomerId     String
+  stripeSubscriptionId String @unique
+
+  customerId String
+  Customer   Customer @relation(fields: [customerId], references: [id])
+  tenantId   String?
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
+  planId     String
+  plan       Plan     @relation(fields: [planId], references: [id])
+}
+
+model Plan {
+  id      String  @id @default(uuid())
+  name    String
+  default Boolean @default(true)
+
+  maxDevices           Int
+  maxMembers           Int
+  maxWorkspaces        Int
+  maxPersonalWorkspace Int
+  retentionPeriod      Int
+  bufferPeriod         Int
+  noOfMinutes          Int // 1 reading every _ minutes
+
+  tenantId      String?
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id])
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+}
+
+model StripeSecret {
+  id                   String @id @default(uuid())
+  stripePriceId        String @unique
+  stripeSecretKey      String @unique
+  stripeWebhookSecret  String @unique
+  stripePublishableKey String @unique
+
+  // Tenant - StripeSecret is one to one relation.
+  tenantId String @unique
+  Tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
